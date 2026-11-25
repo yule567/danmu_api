@@ -1,0 +1,23 @@
+name: 自动同步上游仓库
+
+on:
+  schedule:
+    - cron: '0 20 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 同步上游代码（不强制覆盖）
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh repo sync "${{ github.repository }}" --source huangxd-/danmu_api --branch main
