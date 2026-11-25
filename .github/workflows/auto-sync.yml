@@ -16,8 +16,24 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: 同步上游代码（不强制覆盖）
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: 检出本地仓库
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: 完全同步上游文件并保留自动同步脚本
+        shell: bash
         run: |
-          gh repo sync "${{ github.repository }}" --source huangxd-/danmu_api --branch main
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch --no-tags https://github.com/huangxd-/danmu_api.git refs/heads/main
+          upstream=$(git rev-parse FETCH_HEAD)
+          git restore --source="$upstream" --staged --worktree -- .
+          git restore --source=HEAD --staged --worktree -- .github/workflows/auto-sync.yml
+          if git diff --cached --quiet; then
+            echo "Already up to date"
+            exit 0
+          fi
+          git commit -m "Sync upstream files ($upstream)"
+          git push origin HEAD:main
